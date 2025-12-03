@@ -1,0 +1,44 @@
+﻿@page "/"
+@using global::Inventory.Layout
+@layout MainLayout
+@inject NavigationManager Nav
+
+<PageTitle>Inventory Ledger – Dashboard</PageTitle>
+
+
+<div class="home-hero">
+    <h1>Inventory Ledger</h1>
+    <p>Real-time stock tracking, receipts, issues & valuations.</p>
+</div>
+
+
+<div class="home-cards">
+    <NavLink class="home-card" href="items" Match="NavLinkMatch.Prefix">
+        <span class="oi oi-list-rich"></span>
+        <div>
+            <h3>Items</h3>
+            <span>Browse, add or edit catalogue items.</span>
+        </div>
+        <span class="oi oi-arrow-right"></span>
+    </NavLink>
+
+    <NavLink class="home-card" href="inventory" Match="NavLinkMatch.Prefix">
+        <span class="oi oi-graph"></span>
+        <div>
+            <h3>Inventory</h3>
+            <span>On-hand quantities & total value.</span>
+        </div>
+        <span class="oi oi-arrow-right"></span>
+    </NavLink>
+
+    <NavLink class="home-card" href="items" Match="NavLinkMatch.Prefix">
+        <span class="oi oi-plus"></span>
+        <div>
+            <h3>Record Movement</h3>
+            <span>Log a receipt, adjustment or issue.</span>
+        </div>
+        <span class="oi oi-arrow-right"></span>
+    </NavLink>
+</div>
+
+@code { }

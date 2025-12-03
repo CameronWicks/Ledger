@@ -1,0 +1,176 @@
+﻿@page "/inventory"
+@inject Services.InventoryApiClient InventoryApi
+@using SharedModels
+
+<style>
+    .inv-bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 1rem;
+        align-items: center;
+        margin-bottom: 1.5rem
+    }
+
+        .inv-bar .toggle {
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+            font-weight: 500
+        }
+
+        .inv-bar .meta {
+            margin-left: auto;
+            display: flex;
+            gap: 1.5rem;
+            font-size: .9rem
+        }
+
+    .inv-grid {
+        display: grid;
+        gap: 1.25rem;
+        grid-template-columns: repeat(auto-fill,minmax(16rem,1fr))
+    }
+
+    .inv-card {
+        background: #fff;
+        border-radius: .75rem;
+        padding: 1.25rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,.1);
+        transition: transform .2s
+    }
+
+        .inv-card:hover {
+            transform: translateY(-2px)
+        }
+
+        .inv-card header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: .75rem
+        }
+
+        .inv-card .sku {
+            font-size: .75rem;
+            color: #6b7280;
+            text-transform: uppercase;
+            letter-spacing: .5px
+        }
+
+        .inv-card h3 {
+            font-size: 1.1rem;
+            margin: 0 0 .75rem
+        }
+
+        .inv-card dl {
+            display: grid;
+            grid-template-columns: auto 1fr;
+            gap: .25rem .75rem;
+            margin: 0;
+            font-size: .9rem
+        }
+
+        .inv-card dt {
+            font-weight: 600;
+            color: #6b7280
+        }
+
+        .inv-card dd.value {
+            font-weight: 700;
+            color: #111
+        }
+
+        .inv-card.low {
+            border-left: 4px solid #f59e0b
+        }</style>
+
+<PageTitle>Inventory · Ledger</PageTitle>
+
+<h1>Inventory Summary</h1>
+
+
+<div class="inv-bar">
+    <label class="toggle">
+        <InputCheckbox @bind-Value="LowStockOnly" />
+
+        <span>Low-stock only</span>
+    </label>
+    <div class="meta">
+        <span>Total value: <strong>@($"{Summary?.TotalInventoryValue ?? 0:C}")</strong></span>
+        <span>Low items: <strong>@(Summary?.LowStockCount ?? 0)</strong></span>
+    </div>
+</div>
+
+
+@if (!string.IsNullOrWhiteSpace(ErrorMessage))
+{
+    <div class="alert alert-danger">@ErrorMessage</div>
+}
+
+
+@if (Summary is null)
+{
+    <p>Loading…</p>
+}
+else
+{
+    <div class="inv-grid">
+        @foreach (var item in Summary.Items)
+        {
+            <div class="inv-card @(item.LowStock ? "low" : "")">
+                <header>
+                    <span class="sku">@item.Sku</span>
+                    @if (item.LowStock)
+                    {
+                        <span class="badge bg-warning text-dark">Low</span>
+                    }
+                </header>
+                <h3>@item.Name</h3>
+                <dl>
+                    <dt>On hand</dt>
+                    <dd>@item.OnHandQuantity</dd>
+
+                    <dt>Unit price</dt>
+                    <dd>@item.UnitPrice.ToString("C")</dd>
+
+                    <dt>Value</dt>
+                    <dd class="value">@item.InventoryValue.ToString("C")</dd>
+                </dl>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private bool _lowStockOnly;
+
+    private bool LowStockOnly
+    {
+        get => _lowStockOnly;
+        set
+        {
+            _lowStockOnly = value;
+            _ = LoadSummary();   
+        }
+    }
+
+    private DtoInventorySummaryResult? Summary;
+    private string? ErrorMessage;
+
+    protected override async Task OnInitializedAsync() => await LoadSummary();
+
+    private async Task LoadSummary()
+    {
+        ErrorMessage = null;
+        try
+        {
+            Summary = await InventoryApi.GetSummaryAsync(LowStockOnly);
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+
+        StateHasChanged(); 
+    }
+}

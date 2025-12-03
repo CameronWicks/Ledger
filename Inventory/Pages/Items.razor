@@ -1,0 +1,141 @@
+﻿@page "/items"
+@inject Services.ItemApiClient ItemApi
+@using SharedModels
+@inject NavigationManager Nav
+
+<style>
+    .items-header {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem
+    }
+
+        .items-header h1 {
+            margin: 0;
+            font-size: 1.75rem
+        }
+
+        .items-header .subtitle {
+            color: #6b7280;
+            margin: .25rem 0 0
+        }
+
+    .items-search {
+        display: flex;
+        gap: .5rem;
+        margin-bottom: 1.5rem
+    }
+
+        .items-search input {
+            flex: 1
+        }
+
+    .empty {
+        text-align: center;
+        padding: 3rem;
+        color: #6b7280
+    }
+
+    .items-grid {
+        display: grid;
+        gap: 1.25rem;
+        grid-template-columns: repeat(auto-fill,minmax(18rem,1fr))
+    }
+
+    .item-card {
+        background: #fff;
+        border-radius: .75rem;
+        padding: 1.25rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,.1);
+        display: flex;
+        flex-direction: column;
+        gap: .75rem
+    }
+
+        .item-card header {
+            display: flex;
+            justify-content: space-between;
+            font-size: .75rem;
+            color: #6b7280
+        }
+
+        .item-card h3 {
+            margin: 0;
+            font-size: 1.1rem
+        }
+
+        .item-card .price {
+            font-size: 1.25rem;
+            font-weight: 600
+        }
+
+        .item-card .actions {
+            display: flex;
+            gap: .5rem;
+            margin-top: auto
+        }</style>
+
+<PageTitle>Items · Inventory</PageTitle>
+
+
+<div class="items-header">
+    <div>
+        <h1>Items</h1>
+        <p class="subtitle">Browse catalogue and manage stock</p>
+    </div>
+    <a class="btn btn-primary" href="/items/new">+ New Item</a>
+</div>
+
+<div class="items-search">
+    <input @bind="Search" @bind:event="oninput" placeholder="SKU or name…" class="form-control" />
+    <button class="btn btn-outline-secondary" @onclick="LoadItems">Search</button>
+</div>
+
+
+@if (!string.IsNullOrWhiteSpace(ErrorMessage))
+{
+    <div class="alert alert-danger">@ErrorMessage</div>
+}
+
+
+@if (ItemList.Count == 0)
+{
+    <div class="empty">No items found.</div>
+}
+else
+{
+    <div class="items-grid">
+        @foreach (var item in ItemList)
+        {
+            <div class="item-card">
+                <header>
+                    <span class="sku">@item.Sku</span>
+                    <span class="on-hand">@item.OnHandQuantity in stock</span>
+                </header>
+                <h3>@item.Name</h3>
+                <div class="price">@item.UnitPrice.ToString("C")</div>
+                <div class="actions">
+                    <button class="btn btn-sm btn-outline-primary" @onclick="@(() => Nav.NavigateTo($"/items/{item.Id}"))">Edit</button>
+                    <button class="btn btn-sm btn-outline-primary" href="/items/@item.Id/transactions">Transact</button>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    private List<DtoItemList> ItemList = new();
+    private string? Search;
+    private string? ErrorMessage;
+
+    protected override async Task OnInitializedAsync() => await LoadItems();
+
+    private async Task LoadItems()
+    {
+        ErrorMessage = null;
+        try { ItemList = await ItemApi.GetItemsAsync(Search); }
+        catch (Exception ex) { ErrorMessage = ex.Message; }
+    }
+}

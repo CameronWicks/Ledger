@@ -1,0 +1,36 @@
+﻿@inherits LayoutComponentBase
+@using Inventory.Services
+@using Inventory.SharedModels
+<div class="app-shell">
+    <aside class="sidebar">
+        <div class="brand">
+            <span>Inventory Ledger</span>
+        </div>
+        <NavMenu />
+    </aside>
+
+    <section class="main-panel">
+        <header class="top-bar">
+            <h1 class="title">@PageTitle</h1>
+            <div class="spacer"></div>
+            <button class="btn btn-icon" title="Settings">
+                <span class="oi oi-cog" aria-hidden="true"></span>
+            </button>
+        </header>
+
+        <article class="content">
+            @Body
+        </article>
+    </section>
+</div>
+@code {
+    private string PageTitle => NavManager.ToBaseRelativePath(NavManager.Uri) switch
+    {
+        "" or "/" => "Dashboard",
+        "items" => "Items",
+        "inventory" => "Inventory",
+        var x when x.StartsWith("items/") => "Item Details",
+        _ => "Inventory Ledger"
+    };
+    [Inject] private NavigationManager NavManager { get; set; } = default!;
+}

@@ -1,0 +1,46 @@
+﻿@using Microsoft.AspNetCore.Components.Routing
+@using Inventory.Services
+@inject NavigationManager Nav
+
+<style>
+    .nav-menu {
+        display: flex;
+        flex-direction: column;
+        gap: .5rem;
+        padding: 1rem;
+    }
+
+    .nav-item {
+        display: flex;
+        align-items: center;
+        gap: .75rem;
+        padding: .75rem 1rem;
+        border-radius: .5rem;
+        color: var(--text-secondary);
+        text-decoration: none;
+        transition: background .2s, color .2s;
+    }
+
+        .nav-item:hover {
+            background: var(--hover-bg);
+            color: var(--text-primary);
+        }
+
+        .nav-item.active {
+            background: var(--active-bg);
+            color: #fff;
+        }
+</style>
+
+<nav class="nav-menu">
+    <NavLink class="nav-item" href="/items" Match="NavLinkMatch.Prefix">
+        <span class="oi oi-list-rich" aria-hidden="true"></span>
+        <span>Items</span>
+    </NavLink>
+
+    <NavLink class="nav-item" href="/inventory" Match="NavLinkMatch.Prefix">
+        <span class="oi oi-graph" aria-hidden="true"></span>
+        <span>Inventory</span>
+    </NavLink>
+</nav>
+

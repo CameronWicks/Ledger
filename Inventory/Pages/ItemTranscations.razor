@@ -1,0 +1,229 @@
+﻿@page "/items/{Id:guid}/transactions"
+@using SharedModels
+@inject Services.ItemApiClient ItemApi
+@inject NavigationManager Nav
+
+
+<style>
+    .txn-header {
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem
+    }
+
+        .txn-header h1 {
+            margin: 0;
+            font-size: 1.75rem
+        }
+
+        .txn-header .subtitle {
+            color: #6b7280;
+            margin: .25rem 0 0
+        }
+
+    .txn-grid {
+        display: grid;
+        gap: 1.5rem;
+        grid-template-columns: repeat(auto-fit,minmax(20rem,1fr))
+    }
+
+    .txn-card {
+        background: #fff;
+        border-radius: .75rem;
+        padding: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,.1)
+    }
+
+        .txn-card h5 {
+            margin-bottom: 1rem
+        }
+
+        .txn-card .hint {
+            font-size: .875rem;
+            color: #6b7280;
+            margin-bottom: 1rem
+        }
+
+        .txn-card .on-hand {
+            font-size: 1rem;
+            margin-bottom: 1rem
+        }
+
+            .txn-card .on-hand span {
+                font-weight: 700;
+                font-size: 1.25rem
+            }
+
+    .txn-list {
+        display: flex;
+        flex-direction: column;
+        gap: .75rem;
+        max-height: 24rem;
+        overflow-y: auto
+    }
+
+    .txn-row {
+        display: grid;
+        grid-template-columns: 1fr auto 1fr;
+        gap: 1rem;
+        font-size: .875rem
+    }
+
+        .txn-row .date {
+            color: #6b7280
+        }
+
+        .txn-row .qty {
+            font-weight: 600
+        }
+
+            .txn-row .qty.in {
+                color: #10b981
+            }
+
+            .txn-row .qty.out {
+                color: #ef4444
+            }
+
+        .txn-row .ref {
+            justify-self: end
+        }
+
+    .empty {
+        text-align: center;
+        padding: 2rem 0;
+        color: #6b7280
+    }
+
+    .form-group {
+        margin-bottom: 1rem
+    }
+
+    .loader {
+        padding: 2rem 0;
+        text-align: center;
+        color: #6b7280
+    }
+</style>
+
+<PageTitle>Transactions · @ItemTitle</PageTitle>
+
+
+<div class="txn-header">
+    <div>
+        <h1>Transactions</h1>
+        <p class="subtitle">Stock movements for <strong>@ItemTitle</strong></p>
+    </div>
+    <button class="btn btn-outline-secondary" @onclick="BackToItems">← Items</button>
+</div>
+
+
+@if (!string.IsNullOrWhiteSpace(ErrorMessage))
+{
+    <div class="alert alert-danger">@ErrorMessage</div>
+}
+
+@if (IsLoading)
+{
+    <div class="loader">Loading…</div>
+}
+else
+{
+    <div class="txn-grid">
+
+        <div class="txn-card">
+            <h5>Record Movement</h5>
+            <p class="hint">
+                Positive = receipt / adjustment-in<br />
+                Negative = issue / adjustment-out
+            </p>
+
+            <EditForm Model="NewTransaction" OnValidSubmit="SaveTransactionAsync">
+                <div class="form-group">
+                    <label>Quantity change</label>
+                    <InputNumber class="form-control" @bind-Value="NewTransaction.QuantityChange" />
+                </div>
+
+                <div class="form-group">
+                    <label>Reference / Comment</label>
+                    <InputText class="form-control" @bind-Value="NewTransaction.Reference" />
+                </div>
+
+                <button type="submit" class="btn btn-primary" disabled="@IsSubmitting">
+                    @(IsSubmitting ? "Saving…" : "Save Transaction")
+                </button>
+            </EditForm>
+        </div>
+
+        <div class="txn-card">
+            <h5>History</h5>
+            <p class="on-hand">Current on-hand: <span>@OnHandQuantity</span></p>
+
+            @if (Transactions?.Count is 0 or null)
+            {
+                <p class="empty">No transactions yet.</p>
+            }
+            else
+            {
+                <div class="txn-list">
+                    @foreach (var tx in Transactions!)
+                    {
+                        <div class="txn-row">
+                            <div class="date">@tx.Timestamp.ToLocalTime().ToString("g")</div>
+                            <div class="qty @(tx.QuantityChange > 0 ? "in" : "out")">@tx.QuantityChange</div>
+                            <div class="ref">@tx.Reference</div>
+                        </div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    private DtoItem? Item;
+    private List<DtoStockTransaction> Transactions = new();
+    private DtoStockTransaction NewTransaction = new();
+    private bool IsLoading = true;
+    private bool IsSubmitting;
+    private string? ErrorMessage;
+
+    private string ItemTitle =>
+        Item is null ? $"Item {Id}" : $"{Item.Sku} – {Item.Name}";
+
+    private int OnHandQuantity =>
+        Transactions?.Sum(t => t.QuantityChange) ?? 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            Item = await ItemApi.GetItemAsync(Id);
+            Transactions = await ItemApi.GetTransactionsAsync(Id) ?? new();
+            NewTransaction = new() { ItemId = Id, Timestamp = DateTimeOffset.UtcNow };
+        }
+        catch (Exception ex) { ErrorMessage = ex.Message; }
+        finally { IsLoading = false; }
+    }
+
+    private async Task SaveTransactionAsync()
+    {
+        if (NewTransaction.QuantityChange == 0) return;
+
+        IsSubmitting = true;
+        var errors = new List<string>();
+        if (await ItemApi.RecordTransactionAsync(NewTransaction, errors))
+        {
+            Transactions = await ItemApi.GetTransactionsAsync(Id) ?? new();
+            NewTransaction = new() { ItemId = Id, Timestamp = DateTimeOffset.UtcNow };
+        }
+        else ErrorMessage = string.Join("; ", errors);
+        IsSubmitting = false;
+    }
+
+    private void BackToItems() => Nav.NavigateTo("/items");
+}
