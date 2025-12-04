@@ -118,7 +118,7 @@ else
                 <div class="price">@item.UnitPrice.ToString("C")</div>
                 <div class="actions">
                     <button class="btn btn-sm btn-outline-primary" @onclick="@(() => Nav.NavigateTo($"/items/{item.Id}"))">Edit</button>
-                    <button class="btn btn-sm btn-outline-primary" href="/items/@item.Id/transactions">Transact</button>
+                    <button class="btn btn-sm btn-outline-primary" @onclick="@(() => Nav.NavigateTo($"/items/{item.Id}/transactions"))">Transact</button>
                 </div>
             </div>
         }
